@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Tasks | Flexitasks</title>
+
+<style>
+:root{
+  --bg: white;
+  --card: black;
+  --card-light: black;
+  --btn-dark: green;
+}
+
+html,body{
+  height:100%;margin:0;
+  font-family:Inter,Arial,Helvetica,sans-serif;
+  background:var(--bg);color:#fff
+}
+
+.wrap{
+  max-width:720px;margin:0 auto;padding:18px;
+  padding-bottom:140px;
+}
+
+.back{
+  display:inline-block;padding:10px 14px;
+  background:rgba(255,255,255,0.08);
+  border-radius:10px;color:#fff;
+  text-decoration:none;margin-bottom:14px
+}
+
+h2{
+  font-size:26px;margin:6px 0 18px;color:#fff
+}
+
+.tasks{display:grid;gap:16px}
+
+.card{
+  background:linear-gradient(180deg,var(--card-light),var(--card));
+  border-radius:18px;padding:18px;color:#fff;
+  box-shadow:0 6px 22px rgba(0,0,0,0.35)
+}
+
+.card-head{
+  display:flex;align-items:center;gap:10px;margin-bottom:10px
+}
+
+.star{
+  font-weight:900;font-size:18px;
+  background:rgba(255,255,255,0.06);
+  padding:8px;border-radius:12px
+}
+
+.title{
+  font-size:18px;font-weight:900;
+  text-transform:uppercase;letter-spacing:0.6px
+}
+
+.meta{margin:8px 0;font-weight:700}
+.slots{font-size:13px;margin-top:6px}
+
+.task-actions{margin-top:14px}
+
+.row{
+  display:flex;width:100%;
+  justify-content:space-between;
+  margin-bottom:10px
+}
+
+.row button{
+  flex:1;padding:11px;border-radius:10px;
+  border:none;font-weight:800;color:#fff;cursor:pointer
+}
+
+.row button:first-child{margin-right:10px}
+
+.btn-do{background:rgba(255,255,255,0.15)}
+.btn-claim{background:var(--btn-dark)}
+.btn-edit{background:#0066ff}
+.btn-del{background:#cc0000}
+
+.no-tasks{
+  text-align:center;padding:40px 10px;
+  background:rgba(0,0,0,0.06);border-radius:12px
+}
+
+/* TOAST */
+.toast-success {
+  position: fixed;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0a6e1a;
+  color: #fff;
+  padding: 14px 22px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .4s ease;
+  z-index: 9999;
+}
+.toast-success.show { opacity: 1; }
+
+/* MODAL */
+.modal-bg{
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,0.65);display:none;
+  justify-content:center;align-items:center;z-index:99999
+}
+
+.modal{
+  background:#fff;padding:20px;border-radius:14px;
+  width:90%;max-width:380px;color:#000;text-align:center
+}
+
+.modal h3{margin-bottom:10px}
+
+.image-preview{
+  width:100%;
+  max-height:180px;
+  object-fit:contain;
+  background:#f2f2f2;
+  padding:6px;
+  border-radius:10px;
+  border:1px solid #ddd;
+  display:none;
+  margin-top:12px;
+}
+
+.modal-buttons {
+  margin-top: 22px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-buttons button {
+  flex: 1;
+  padding: 12px 0;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+}
+
+.cancel-btn { background:#cc0000 }
+.submit-btn { background:#0c7d21 }
+
+/* Floating Create Button */
+#createTaskBtn {
+  position: fixed;
+  bottom: 26px;
+  right: 26px;
+  width: 60px;
+  height: 60px;
+  background:#ffffff;
+  border-radius:50%;
+  display:none;
+  justify-content:center;
+  align-items:center;
+  box-shadow:0 6px 20px rgba(0,0,0,0.35);
+  cursor:pointer;
+  z-index:9999;
+}
+#createTaskBtn svg {
+  width: 32px;
+  height: 32px;
+  fill:#0c7d21;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SUCCESS TOAST -->
+<div id="taskSuccessToast" class="toast-success">✅ Task claimed successfully!</div>
+
+<!-- IMAGE UPLOAD MODAL -->
+<div id="uploadModal" class="modal-bg">
+  <div class="modal">
+    <h3>Upload Task Proof</h3>
+    <input type="file" id="proofImage" accept="image/*" />
+    <img id="previewImage" class="image-preview" />
+    <div class="modal-buttons">
+      <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+      <button class="submit-btn" id="submitBtn">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- FLOATING CREATE BUTTON -->
+<div id="createTaskBtn" onclick="location.href='create task.html'">
+  <svg viewBox="0 0 24 24">
+    <path d="M12 5v14m7-7H5" stroke="#0c7d21" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+</div>
+
+<div class="wrap">
+  <a href="dashboard.html" class="back">← Back</a>
+  <h2>Daily Tasks</h2>
+  <div id="tasksContainer" class="tasks"></div>
+</div>
+
+<script>
+(function(){
+
+const TASKS_KEY = "tasks";
+const username = localStorage.getItem("loggedInUser");
+const userRole = localStorage.getItem("userRole");
+
+let pendingTaskId = null;
+
+// Redirect if not logged in
+if (!username) {
+  alert("Please login first");
+  location.href = "login.html";
+  return;
+}
+
+if (userRole === "admin") {
+  document.getElementById("createTaskBtn").style.display = "flex";
+}
+
+/* ----------------------- IndexedDB for image storage ----------------------- */
+
+let db;
+const DB_NAME = "FlexiJobsDB";
+const STORE = "taskProofs";
+
+const req = indexedDB.open(DB_NAME, 1);
+
+req.onupgradeneeded = function(e) {
+  db = e.target.result;
+  if (!db.objectStoreNames.contains(STORE)) {
+    db.createObjectStore(STORE, { keyPath: "id", autoIncrement: true });
+  }
+};
+
+req.onsuccess = function(e){
+  db = e.target.result;
+};
+
+req.onerror = function(){
+  console.log("IndexedDB failed");
+};
+
+/* Save image to IndexedDB */
+function saveImageToDB(base64, cb){
+  const tx = db.transaction([STORE], "readwrite");
+  const store = tx.objectStore(STORE);
+
+  const item = { username, image: base64, time: Date.now() };
+  const reqAdd = store.add(item);
+
+  reqAdd.onsuccess = () => cb(reqAdd.result);
+  reqAdd.onerror = () => alert("Failed to save image");
+}
+
+/* ----------------------- Image preview ----------------------- */
+
+document.getElementById("proofImage").addEventListener("change", function(){
+  const file = this.files[0];
+  if (!file) return;
+
+  const preview = document.getElementById("previewImage");
+  const reader = new FileReader();
+
+  reader.onload = e => {
+    preview.src = e.target.result;
+    preview.style.display = "block";
+  };
+  reader.readAsDataURL(file);
+});
+
+function showSuccessToast() {
+  const toast = document.getElementById("taskSuccessToast");
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 2500);
+}
+
+/* ----------------------- load/save tasks ----------------------- */
+
+function normalizeTasks(tasks) {
+  return tasks.map(t => ({ ...t, id: String(t.id) }));
+}
+
+function loadTasks() {
+  return normalizeTasks(JSON.parse(localStorage.getItem(TASKS_KEY) || "[]"));
+}
+
+function saveTasks(arr) {
+  localStorage.setItem(TASKS_KEY, JSON.stringify(arr));
+}
+
+function loadCompletedForUser(user){
+  return JSON.parse(localStorage.getItem("completedTasks_" + user) || "[]");
+}
+
+function saveCompletedForUser(user, arr){
+  localStorage.setItem("completedTasks_" + user, JSON.stringify(arr));
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[m]));
+}
+
+/* ----------------------- Render tasks ----------------------- */
+
+function render(){
+  const wrap = document.getElementById("tasksContainer");
+  wrap.innerHTML = "";
+
+  const tasks = loadTasks();
+  const done = loadCompletedForUser(username);
+
+  const available = tasks.filter(t => !done.includes(String(t.id)));
+
+  if (!available.length) {
+    wrap.innerHTML = `<div class="no-tasks"><h2>🎉 You have completed all tasks.</h2></div>`;
+    return;
+  }
+
+  available.forEach(task=>{
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const adminControls = (userRole === "admin")
+      ? `
+        <div class="row">
+          <button class="btn-del" onclick="removeTask('${task.id}')">Delete</button>
+          <button class="btn-edit" onclick="editTask('${task.id}')">Edit</button>
+        </div>`
+      : "";
+
+    card.innerHTML = `
+      <div class="card-head">
+        <div class="star">★</div>
+        <div>
+          <div class="title">${escapeHtml(task.title)}</div>
+          <div class="meta">Reward: ₦${Number(task.reward).toFixed(2)}</div>
+        </div>
+      </div>
+
+      <div class="slots">Slots left:
+        <strong id="slots_${task.id}">${task.slots}</strong>
+      </div>
+
+      <div class="task-actions">
+        <div class="row">
+          <button class="btn-do" onclick="doTask('${task.id}')">⤴ Do Task</button>
+          <button class="btn-claim" onclick="openModal('${task.id}')">🎁 Claim</button>
+        </div>
+        ${adminControls}
+      </div>
+    `;
+
+    wrap.appendChild(card);
+  });
+
+}
+
+/* ----------------------- Task actions ----------------------- */
+
+window.doTask = function(id){
+  const tasks = loadTasks();
+  const t = tasks.find(x => x.id === String(id));
+  if (!t) return alert("Task not found");
+  if (t.link) window.open(t.link, "_blank");
+};
+
+window.openModal = function(id){
+  pendingTaskId = id;
+  document.getElementById("uploadModal").style.display = "flex";
+};
+
+window.closeModal = function(){
+  pendingTaskId = null;
+  document.getElementById("proofImage").value = "";
+  document.getElementById("previewImage").style.display = "none";
+  document.getElementById("uploadModal").style.display = "none";
+};
+
+/* ----------------------- Submit task (fixed) ----------------------- */
+
+document.getElementById("submitBtn").addEventListener("click", function(){
+
+  if (!pendingTaskId) return alert("Error: No task selected");
+
+  const input = document.getElementById("proofImage");
+  if (!input.files.length) return alert("Upload an image");
+
+  const file = input.files[0];
+  const reader = new FileReader();
+
+  reader.onload = e => {
+    const base64 = e.target.result;
+
+    // Save image in IndexedDB (NOT localStorage)
+    saveImageToDB(base64, imageId => {
+
+      // Save only metadata in localStorage
+      const key = "taskSubmissions_" + username;
+      let arr = JSON.parse(localStorage.getItem(key) || "[]");
+
+      arr.unshift({
+        taskId:String(pendingTaskId),
+        imageId:imageId,
+        timestamp:Date.now()
+      });
+
+      localStorage.setItem(key, JSON.stringify(arr));
+
+      claimTask(pendingTaskId);
+      closeModal();
+    });
+  };
+
+  reader.readAsDataURL(file);
+});
+
+/* ----------------------- Claim task ----------------------- */
+
+window.claimTask = function(id){
+  if (userRole === "admin") return alert("Admin can't claim tasks");
+
+  let tasks = loadTasks();
+  let index = tasks.findIndex(t => t.id === String(id));
+  if (index === -1) return;
+
+  let task = tasks[index];
+
+  const completed = loadCompletedForUser(username);
+  if (completed.includes(String(id))) return;
+
+  const uKey = "user_" + username;
+  let user = JSON.parse(localStorage.getItem(uKey) || "{}");
+  user.balance = Number(user.balance || 0) + Number(task.reward);
+  localStorage.setItem(uKey, JSON.stringify(user));
+
+  const txKey = "transactions_" + username;
+  let tx = JSON.parse(localStorage.getItem(txKey) || "[]");
+  tx.unshift({
+    type:"Task Reward",
+    amount:Number(task.reward),
+    taskId:String(task.id),
+    date:new Date().toISOString(),
+    status:"Approved"
+  });
+  localStorage.setItem(txKey, JSON.stringify(tx));
+
+  completed.push(String(id));
+  saveCompletedForUser(username, completed);
+
+  tasks[index].slots--;
+
+  if (tasks[index].slots <= 0)
+    tasks = tasks.filter(t => t.id !== String(id));
+
+  saveTasks(tasks);
+  showSuccessToast();
+  render();
+};
+
+/* ----------------------- Admin tools ----------------------- */
+
+window.removeTask = function(id){
+  if (userRole !== "admin") return;
+
+  let tasks = loadTasks().filter(t => t.id !== String(id));
+  saveTasks(tasks);
+
+  Object.keys(localStorage).forEach(key=>{
+    if (key.startsWith("completedTasks_")){
+      let arr = JSON.parse(localStorage.getItem(key) || "[]");
+      arr = arr.filter(x=>x !== String(id));
+      localStorage.setItem(key, JSON.stringify(arr));
+    }
+  });
+
+  render();
+};
+
+window.editTask = id => {
+  location.href = `edit-task.html?id=${id}`;
+};
+
+render();
+
+})();
+</script>
+
+</body>
+</html>
