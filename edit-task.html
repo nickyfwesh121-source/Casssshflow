@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit Task | flexitasks</title>
+<style>
+body { margin:0; padding:0; font-family: Arial, sans-serif; background:#28a745; color:#fff; min-height:100vh; }
+h2 { text-align:center; padding:20px; margin:0; font-size:28px; }
+.form-box { width:90%; max-width:500px; margin:20px auto; background:#fff; padding:25px; border-radius:15px; color:#000; }
+.form-box label { display:block; margin-top:15px; margin-bottom:8px; font-weight:600; }
+.form-box input, .form-box textarea { width:100%; padding:12px; border-radius:8px; border:2px solid #e0e0e0; font-size:15px; box-sizing:border-box; }
+.form-box input:focus, .form-box textarea:focus { border-color:#28a745; outline:none; box-shadow:0 0 0 3px rgba(40,167,69,0.1); }
+.form-box textarea { resize: vertical; font-family: Arial, sans-serif; }
+.btn-save { width:100%; background:#28a745; color:white; padding:14px; margin-top:25px; border:none; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer; }
+.btn-save:hover { background:#218838; transform: translateY(-2px); }
+.back-btn { display:inline-block; background:white; color:#28a745; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600; margin:20px 0 0 20px; }
+.back-btn:hover { background:#f8f9fa; }
+</style>
+</head>
+<body>
+
+<a href="tasks.html" class="back-btn">← Back to Tasks</a>
+<h2>Edit Task</h2>
+
+<div class="form-box">
+    <label>Task Title *</label>
+    <input type="text" id="taskTitle">
+
+    <label>Reward (₦) *</label>
+    <input type="number" id="taskReward">
+
+    <label>Task Link *</label>
+    <input type="text" id="taskLink">
+
+    <label>Number of Slots *</label>
+    <input type="number" id="taskSlots">
+
+    <button class="btn-save" onclick="saveTask()">Save Changes</button>
+</div>
+
+<script>
+// Only admins can access
+if (localStorage.getItem("userRole") !== "admin") {
+    alert("Access denied. Admin only.");
+    window.location.href = "dashboard.html";
+}
+
+// Get ID from URL correctly
+const urlParams = new URLSearchParams(window.location.search);
+const editTaskId = urlParams.get("id");
+
+// Load tasks
+let tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+
+// Find task
+let task = tasks.find(t => t.id == editTaskId);
+
+if (!task) {
+    alert("Task not found.");
+    window.location.href = "tasks.html";
+}
+
+// Populate fields
+document.getElementById("taskTitle").value = task.title;
+document.getElementById("taskDescription").value = task.description;
+document.getElementById("taskReward").value = task.reward;
+document.getElementById("taskLink").value = task.link;
+document.getElementById("taskSlots").value = task.slots;
+
+// Save changes
+function saveTask() {
+    let title = document.getElementById("taskTitle").value.trim();
+    let description = document.getElementById("taskDescription").value.trim();
+    let reward = parseFloat(document.getElementById("taskReward").value.trim());
+    let link = document.getElementById("taskLink").value.trim();
+    let slots = parseInt(document.getElementById("taskSlots").value.trim());
+
+    if (!title || !description || isNaN(reward) || !link || isNaN(slots)) {
+        alert("Please fill all fields correctly.");
+        return;
+    }
+
+    // Update task
+    task.title = title;
+    task.reward = reward;
+    task.link = link;
+    task.slots = slots;
+
+    // Save
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+
+    alert("Task updated successfully!");
+    window.location.href = "tasks.html";
+}
+</script>
+
+</body>
+</html>

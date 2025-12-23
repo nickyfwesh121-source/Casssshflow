@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Users | Flexitasks</title>
+
+<style>
+:root{
+  --bg: white;
+  --card: green;
+  --card-light:#27a43f;
+  --accent:#0c7d21;
+}
+
+/* Page base */
+html,body{
+  height:100%;
+  margin:0;
+  font-family:Inter,Arial,Helvetica,sans-serif;
+  background:var(--bg);
+  color:#fff;
+}
+
+.wrap{
+  max-width:720px;
+  margin:0 auto;
+  padding:18px;
+  padding-bottom:80px;
+}
+
+/* header */
+.header{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  margin-bottom:12px;
+}
+.back{
+  display:inline-block;
+  padding:8px 12px;
+  background:rgba(255,255,255,0.08);
+  border-radius:10px;
+  color: green;
+  text-decoration:none;
+}
+h1{
+  margin:0;
+  font-size:22px;
+  font-weight:800;
+}
+
+/* search */
+.search-row{
+  margin:14px 0 20px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+.search-input{
+  flex:1;
+  padding:12px 14px;
+  border-radius:12px;
+  border:none;
+  font-size:15px;
+  outline:none;
+  background:rgba(255,255,255,0.06);
+  color:#fff;
+}
+
+/* users list */
+.users-list{display:grid;gap:12px}
+.user-card{
+  background:linear-gradient(180deg,var(--card-light),var(--card));
+  padding:14px;
+  border-radius:14px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.35);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  cursor:pointer;
+}
+.user-left{display:flex;flex-direction:column}
+.user-name{font-weight:800;font-size:16px}
+.user-balance{font-size:13px;opacity:0.95;margin-top:6px}
+
+/* modal - centered */
+.modal-bg{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:rgba(0,0,0,0.7);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  z-index:99999;
+  padding:20px;
+  box-sizing:border-box;
+}
+
+/* modal card */
+.modal{
+  width:90%;
+  max-width:720px;
+  background:#fff;
+  color:#000;
+  border-radius:14px;
+  max-height:70vh;
+  overflow:auto;
+  padding:20px;
+  box-sizing:border-box;
+}
+
+/* modal content formatting */
+.modal h3{margin:0 0 12px;font-size:18px}
+.sub-item{
+  margin-bottom:22px;
+  border-bottom:1px solid #eee;
+  padding-bottom:12px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.sub-item p{margin:6px 0;font-weight:700;width:100%}
+.sub-item .sub-meta{font-weight:700;color:#333;margin-bottom:8px;font-size:13px;width:100%}
+
+/* image */
+.sub-img{
+  width:100%;
+  max-width:420px;
+  max-height:420px;
+  object-fit:contain;
+  background:#f6f6f6;
+  border-radius:10px;
+  display:block;
+  margin-top:8px;
+  box-shadow:0 6px 18px rgba(0,0,0,0.08);
+}
+
+/* fallback */
+.no-sub{
+  padding:10px;color:#444;background:#fafafa;border-radius:10px;
+  text-align:center;width:100%
+}
+
+/* modal buttons */
+.close-row{display:flex;gap:10px;margin-top:12px}
+.close-btn{
+  flex:1;padding:12px;border-radius:10px;border:none;font-weight:800;
+  background:#cc0000;color:#fff;cursor:pointer;
+}
+.download-btn{
+  flex:1;padding:12px;border-radius:10px;border:none;font-weight:800;
+  background:var(--accent);color:#fff;cursor:pointer;
+}
+
+.clear-btn{
+  width:100%;
+  margin-top:12px;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:#ff9800;
+  color:#fff;
+  font-weight:800;
+  cursor:pointer;
+}
+
+@media (max-width:420px){
+  .sub-item p{font-size:14px}
+  .sub-img{max-width:320px}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="header">
+    <a class="back" href="dashboard.html">← Back</a>
+    <h1>Users | FlexiJobs</h1>
+  </div>
+
+  <div class="search-row">
+    <input id="searchInput" class="search-input" placeholder="Search users (type username)..." />
+  </div>
+
+  <div id="usersList" class="users-list"></div>
+</div>
+
+<!-- Modal -->
+<div id="subModal" class="modal-bg" onclick="if(event.target===this) closeModal()">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="modalTitle">Submissions</h3>
+    <div id="submissionsContainer"></div>
+
+    <div class="close-row">
+      <button class="download-btn" id="downloadBtn" style="display:none">Download Image</button>
+      <button class="close-btn" onclick="closeModal()">Close</button>
+    </div>
+
+    <!-- NEW CLEAR BUTTON -->
+    <button id="clearBtn" class="clear-btn" onclick="clearSubmissions()" style="display:none;">
+      Clear Submissions
+    </button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const DB_NAME = "FlexiJobsDB";
+  const STORE = "taskProofs";
+
+  const userRole = localStorage.getItem("userRole");
+  if (userRole !== "admin") {
+    alert("Access denied. Only admins may view this page.");
+    location.href = "dashboard.html";
+    return;
+  }
+
+  let db = null;
+  let currentUserForModal = null;
+
+  const usersList = document.getElementById("usersList");
+  const searchInput = document.getElementById("searchInput");
+  const subModal = document.getElementById("subModal");
+  const modalTitle = document.getElementById("modalTitle");
+  const submissionsContainer = document.getElementById("submissionsContainer");
+  const clearBtn = document.getElementById("clearBtn");
+
+  function openDB(){
+    return new Promise((resolve, reject) => {
+      if (db) return resolve(db);
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onsuccess = e => { db = e.target.result; resolve(db); };
+      req.onerror = e => reject(e);
+      req.onupgradeneeded = e => {
+        db = e.target.result;
+        if (!db.objectStoreNames.contains(STORE)) {
+          db.createObjectStore(STORE, { keyPath:"id", autoIncrement:true });
+        }
+      };
+    });
+  }
+
+  function getImageById(id){
+    return new Promise((resolve)=>{
+      if (!id && id !== 0) return resolve(null);
+      openDB().then(db=>{
+        const tx = db.transaction([STORE],"readonly");
+        const store = tx.objectStore(STORE);
+        const req = store.get(Number(id));
+        req.onsuccess = ()=> resolve(req.result ? req.result.image : null);
+        req.onerror = ()=> resolve(null);
+      });
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function loadAllUsers(){
+    const out=[];
+    for (let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      if (key.startsWith("user_")){
+        const username=key.slice(5);
+        const d=JSON.parse(localStorage.getItem(key)||"{}");
+        out.push({username,balance:Number(d.balance||0)});
+      }
+    }
+    return out.sort((a,b)=>a.username.localeCompare(b.username));
+  }
+
+  function renderUsers(filter=""){
+    const q=filter.trim().toLowerCase();
+    const all=loadAllUsers();
+    const list=q?all.filter(u=>u.username.toLowerCase().includes(q)):all;
+
+    usersList.innerHTML="";
+    if (!list.length){
+      usersList.innerHTML="<div style='padding:12px;color:#fff'>No users found.</div>";
+      return;
+    }
+
+    list.forEach(u=>{
+      const card=document.createElement("div");
+      card.className="user-card";
+      card.innerHTML=`
+        <div class="user-left">
+          <div class="user-name">${u.username}</div>
+          <div class="user-balance">Balance: ₦${u.balance.toFixed(2)}</div>
+        </div>
+        <div style="opacity:.95;font-weight:700">View</div>
+      `;
+      card.onclick=()=>openUserModal(u.username);
+      usersList.appendChild(card);
+    });
+  }
+
+  async function openUserModal(username){
+    currentUserForModal = username;
+    clearBtn.style.display="block";
+
+    modalTitle.innerText=`Submissions by: ${username}`;
+    submissionsContainer.innerHTML="<div style='padding:12px;color:#666'>Loading…</div>";
+
+    let arr=[];
+    try{ arr = JSON.parse(localStorage.getItem("taskSubmissions_"+username)||"[]"); }
+    catch{ arr=[]; }
+
+    if (!arr.length){
+      submissionsContainer.innerHTML=`<div class="no-sub">No submissions for ${escapeHtml(username)}</div>`;
+      subModal.style.display="flex";
+      return;
+    }
+
+    submissionsContainer.innerHTML="";
+    for (const sub of arr){
+      const wrap=document.createElement("div");
+      wrap.className="sub-item";
+
+      wrap.innerHTML = `
+        <p><span class="sub-meta">Task ID:</span> ${escapeHtml(String(sub.taskId))}</p>
+        <p><span class="sub-meta">Date:</span> ${new Date(Number(sub.timestamp)).toLocaleString()}</p>
+      `;
+
+      const img=document.createElement("img");
+      img.className="sub-img";
+
+      submissionsContainer.appendChild(wrap);
+      wrap.appendChild(img);
+
+      const base64 = await getImageById(sub.imageId);
+      if (base64){
+        img.src=base64;
+        img.style.cursor="pointer";
+        img.onclick=()=>{const w=window.open(""); w.document.write(`<img src="${base64}" style="max-width:100%">`);};
+      } else {
+        img.remove();
+        wrap.innerHTML += `<div class="no-sub">Image missing</div>`;
+      }
+    }
+
+    subModal.style.display="flex";
+  }
+
+  window.closeModal = function(){
+    subModal.style.display="none";
+    submissionsContainer.innerHTML="";
+  };
+
+  /* ===============================
+        CLEAR SUBMISSIONS BUTTON
+     =============================== */
+  window.clearSubmissions = async function(){
+    if (!currentUserForModal) return;
+    if (!confirm("Are you sure you want to clear all submissions for this user?")) return;
+
+    let arr=[];
+    try{ arr = JSON.parse(localStorage.getItem("taskSubmissions_"+currentUserForModal)||"[]"); }
+    catch{ arr=[]; }
+
+    const db = await openDB();
+
+    const tx = db.transaction([STORE],"readwrite");
+    const store = tx.objectStore(STORE);
+
+    arr.forEach(sub=>{
+      if (sub.imageId !== undefined) {
+        store.delete(Number(sub.imageId));
+      }
+    });
+
+    localStorage.setItem("taskSubmissions_"+currentUserForModal,"[]");
+
+    submissionsContainer.innerHTML=`<div class="no-sub">No submissions for ${currentUserForModal}</div>`;
+  };
+
+  searchInput.oninput=e=>renderUsers(e.target.value);
+
+  openDB().finally(()=>renderUsers());
+})();
+</script>
+
+</body>
+</html>
